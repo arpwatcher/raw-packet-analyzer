@@ -3,6 +3,8 @@
 #include "ethernet.h"
 #include "ip.h"
 #include "pcap_format.h"
+#include "tcp.h"
+#include "udp.h"
 
 static const char *protocol_name(uint8_t protocol) {
     switch (protocol) {
@@ -53,6 +55,30 @@ int main(int argc, char **argv) {
         char src[16], dst[16];
         ip_format_addr(ip.src_ip, src);
         ip_format_addr(ip.dst_ip, dst);
+
+        const unsigned char *payload = buf + ETHERNET_HEADER_LEN + ip.header_len;
+        size_t payload_len = header.incl_len - ETHERNET_HEADER_LEN - ip.header_len;
+
+        if (ip.protocol == IP_PROTO_TCP) {
+            tcp_header_t tcp;
+            if (tcp_parse(payload, payload_len, &tcp) == 0) {
+                char flags[32];
+                tcp_format_flags(tcp.flags, flags);
+                printf("%3d: %-15s:%-5u -> %-15s:%-5u %-5s len=%u ttl=%u flags=%s\n",
+                       count, src, tcp.src_port, dst, tcp.dst_port,
+                       protocol_name(ip.protocol), ip.total_length, ip.ttl, flags);
+                continue;
+            }
+        } else if (ip.protocol == IP_PROTO_UDP) {
+            udp_header_t udp;
+            if (udp_parse(payload, payload_len, &udp) == 0) {
+                printf("%3d: %-15s:%-5u -> %-15s:%-5u %-5s len=%u ttl=%u\n",
+                       count, src, udp.src_port, dst, udp.dst_port,
+                       protocol_name(ip.protocol), ip.total_length, ip.ttl);
+                continue;
+            }
+        }
+
         printf("%3d: %-15s -> %-15s %-5s len=%u ttl=%u\n",
                count, src, dst, protocol_name(ip.protocol), ip.total_length, ip.ttl);
     }
