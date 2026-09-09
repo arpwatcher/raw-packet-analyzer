@@ -16,12 +16,13 @@ bin/genpcap: $(CORE_SRC) src/genpcap.c
 	mkdir -p bin
 	$(CC) $(CFLAGS) -o $@ $(CORE_SRC) src/genpcap.c
 
-test: $(TEST_BINS)
+test: $(TEST_BINS) bin/pktdump bin/genpcap
 	./bin/test_pcap_format
 	./bin/test_ethernet
 	./bin/test_ip
 	./bin/test_tcp
 	./bin/test_udp
+	./tests/test_genpcap_integration.sh
 
 bin/test_pcap_format: $(CORE_SRC) tests/test_pcap_format.c
 	mkdir -p bin
