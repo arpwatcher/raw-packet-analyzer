@@ -6,11 +6,15 @@ TEST_BINS = bin/test_pcap_format bin/test_ethernet bin/test_ip bin/test_tcp bin/
 
 .PHONY: all test clean
 
-all: bin/pktdump
+all: bin/pktdump bin/genpcap
 
 bin/pktdump: $(CORE_SRC) src/main.c
 	mkdir -p bin
 	$(CC) $(CFLAGS) -o $@ $(CORE_SRC) src/main.c
+
+bin/genpcap: $(CORE_SRC) src/genpcap.c
+	mkdir -p bin
+	$(CC) $(CFLAGS) -o $@ $(CORE_SRC) src/genpcap.c
 
 test: $(TEST_BINS)
 	./bin/test_pcap_format
