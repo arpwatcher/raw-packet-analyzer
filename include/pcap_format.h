@@ -10,6 +10,7 @@
 
 #define PCAP_MAGIC_NATIVE 0xa1b2c3d4u
 #define PCAP_MAGIC_SWAPPED 0xd4c3b2a1u
+#define PCAP_LINKTYPE_ETHERNET 1u
 
 typedef struct {
     uint32_t magic_number;
@@ -47,5 +48,24 @@ int pcap_reader_next(pcap_reader_t *reader, pcap_packet_header_t *header,
                       unsigned char *buf, size_t buf_len);
 
 void pcap_reader_close(pcap_reader_t *reader);
+
+typedef struct {
+    FILE *file;
+} pcap_writer_t;
+
+/* opens path for writing and writes the global header (native byte order,
+ * this machine's endianness - a reader on the same machine never needs to
+ * swap what this writes). returns 0 on success, -1 if the file can't be
+ * created. */
+int pcap_writer_open(pcap_writer_t *writer, const char *path,
+                      uint32_t snaplen, uint32_t network);
+
+/* writes one packet record: a pcap_packet_header_t built from the given
+ * timestamp and length, followed by len bytes from buf. returns 0 on
+ * success, -1 on a write error. */
+int pcap_writer_write_packet(pcap_writer_t *writer, uint32_t ts_sec, uint32_t ts_usec,
+                              const unsigned char *buf, uint32_t len);
+
+void pcap_writer_close(pcap_writer_t *writer);
 
 #endif

@@ -76,3 +76,55 @@ void pcap_reader_close(pcap_reader_t *reader) {
         reader->file = NULL;
     }
 }
+
+int pcap_writer_open(pcap_writer_t *writer, const char *path,
+                      uint32_t snaplen, uint32_t network) {
+    writer->file = fopen(path, "wb");
+    if (!writer->file) {
+        return -1;
+    }
+
+    pcap_global_header_t global_header = {
+        .magic_number = PCAP_MAGIC_NATIVE,
+        .version_major = 2,
+        .version_minor = 4,
+        .thiszone = 0,
+        .sigfigs = 0,
+        .snaplen = snaplen,
+        .network = network,
+    };
+
+    if (fwrite(&global_header, sizeof(global_header), 1, writer->file) != 1) {
+        fclose(writer->file);
+        writer->file = NULL;
+        return -1;
+    }
+
+    return 0;
+}
+
+int pcap_writer_write_packet(pcap_writer_t *writer, uint32_t ts_sec, uint32_t ts_usec,
+                              const unsigned char *buf, uint32_t len) {
+    pcap_packet_header_t header = {
+        .ts_sec = ts_sec,
+        .ts_usec = ts_usec,
+        .incl_len = len,
+        .orig_len = len,
+    };
+
+    if (fwrite(&header, sizeof(header), 1, writer->file) != 1) {
+        return -1;
+    }
+    if (fwrite(buf, 1, len, writer->file) != len) {
+        return -1;
+    }
+
+    return 0;
+}
+
+void pcap_writer_close(pcap_writer_t *writer) {
+    if (writer->file) {
+        fclose(writer->file);
+        writer->file = NULL;
+    }
+}
