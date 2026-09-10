@@ -22,15 +22,20 @@ usual C pointer/alignment traps than reading about them.
   ihl, just called something else).
 - `udp.c/h` - parses udp headers. much simpler than tcp - always exactly 8 bytes,
   no options, no flags.
+- `icmp.c/h` - parses icmp headers: type, code, and the identifier/sequence fields
+  (only meaningful for echo request/reply, but that's most of what shows up in a
+  normal capture - a ping). includes a name lookup so the summary line shows "echo
+  request" instead of a bare type number.
 - `main.c` - `pktdump`, a small cli that reads a pcap file and prints a tcpdump-style
-  one-line summary per packet, with ports and tcp flags when the payload is tcp/udp.
-  `--verbose` prints the full parsed fields of every header underneath each summary
-  line instead of just the one-liner.
+  one-line summary per packet, with ports and tcp flags when the payload is tcp/udp,
+  or the icmp type name when it's icmp. `--verbose` prints the full parsed fields of
+  every header underneath each summary line instead of just the one-liner.
 - `genpcap.c` - a small cli that writes a synthetic pcap (a tcp syn packet, a udp
-  packet) entirely in C, building the raw ethernet/ip/tcp/udp bytes by hand and piping
-  them through the pcap writer. exists so this repo doesn't need python/scapy to
-  produce its own test captures - `tests/fixtures/make_sample_pcap.py` is still there
-  for the more varied fixture, but genpcap has no external dependency at all.
+  packet, an icmp echo request) entirely in C, building the raw ethernet/ip/tcp/udp/icmp
+  bytes by hand and piping them through the pcap writer. exists so this repo doesn't
+  need python/scapy to produce its own test captures - `tests/fixtures/make_sample_pcap.py`
+  is still there for the more varied fixture, but genpcap has no external dependency
+  at all.
 
 Still to come: maybe live capture via raw sockets if this environment allows it
 (untested so far, might need privileges this sandbox doesn't have).
@@ -50,7 +55,7 @@ make all
 make test
 ```
 
-22 tests across five binaries (pcap format, ethernet, ip, tcp, udp), using plain assert() rather
+28 tests across six binaries (pcap format, ethernet, ip, tcp, udp, icmp), using plain assert() rather
 than a test framework - simple, no dependencies, matches the rest of this project's
 "nothing fancy, just correct" approach. `tests/fixtures/sample.pcap` is a real pcap
 generated with scapy (`tests/fixtures/make_sample_pcap.py`), so the tests are parsing an
