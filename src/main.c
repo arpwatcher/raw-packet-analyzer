@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "ethernet.h"
+#include "icmp.h"
 #include "ip.h"
 #include "pcap_format.h"
 #include "tcp.h"
@@ -37,6 +38,12 @@ static void print_verbose_tcp(const tcp_header_t *tcp) {
 
 static void print_verbose_udp(const udp_header_t *udp) {
     printf("       udp: length=%u\n", udp->length);
+}
+
+static void print_verbose_icmp(const icmp_header_t *icmp) {
+    printf("       icmp: type=%u code=%u (%s) identifier=%u sequence=%u\n",
+           icmp->type, icmp->code, icmp_type_name(icmp->type, icmp->code),
+           icmp->identifier, icmp->sequence);
 }
 
 int main(int argc, char **argv) {
@@ -128,6 +135,19 @@ int main(int argc, char **argv) {
                     print_verbose_ethernet(&eth);
                     print_verbose_ip(&ip);
                     print_verbose_udp(&udp);
+                }
+                continue;
+            }
+        } else if (ip.protocol == IP_PROTO_ICMP) {
+            icmp_header_t icmp;
+            if (icmp_parse(payload, payload_len, &icmp) == 0) {
+                printf("%3d: %-15s -> %-15s %-5s len=%u ttl=%u %s\n",
+                       count, src, dst, protocol_name(ip.protocol), ip.total_length,
+                       ip.ttl, icmp_type_name(icmp.type, icmp.code));
+                if (verbose) {
+                    print_verbose_ethernet(&eth);
+                    print_verbose_ip(&ip);
+                    print_verbose_icmp(&icmp);
                 }
                 continue;
             }
