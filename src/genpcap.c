@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "ethernet.h"
+#include "icmp.h"
 #include "ip.h"
 #include "pcap_format.h"
 
@@ -70,6 +71,17 @@ static size_t build_udp(unsigned char *buf, uint16_t src_port, uint16_t dst_port
     return 8;
 }
 
+static size_t build_icmp_echo_request(unsigned char *buf, uint16_t identifier, uint16_t sequence) {
+    buf[0] = ICMP_TYPE_ECHO_REQUEST;
+    buf[1] = 0x00; /* code */
+    buf[2] = 0x00; buf[3] = 0x00; /* checksum, left zero */
+    buf[4] = (unsigned char)(identifier >> 8);
+    buf[5] = (unsigned char)(identifier & 0xff);
+    buf[6] = (unsigned char)(sequence >> 8);
+    buf[7] = (unsigned char)(sequence & 0xff);
+    return 8;
+}
+
 static uint32_t ip_addr(unsigned char a, unsigned char b, unsigned char c, unsigned char d) {
     return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) | d;
 }
@@ -103,8 +115,15 @@ int main(int argc, char **argv) {
     off += build_udp(packet + off, 52000, 53, 8);
     pcap_writer_write_packet(&writer, 1700000001, 0, packet, (uint32_t)off);
 
+    /* packet 3: icmp echo request, 10.0.0.5 -> 10.0.0.1 */
+    off = build_ethernet(packet, ETHERTYPE_IPV4);
+    off += build_ipv4(packet + off, IP_PROTO_ICMP, 28,
+                       ip_addr(10, 0, 0, 5), ip_addr(10, 0, 0, 1));
+    off += build_icmp_echo_request(packet + off, 1, 1);
+    pcap_writer_write_packet(&writer, 1700000002, 0, packet, (uint32_t)off);
+
     pcap_writer_close(&writer);
 
-    fprintf(stderr, "wrote 2 packets to %s\n", argv[1]);
+    fprintf(stderr, "wrote 3 packets to %s\n", argv[1]);
     return 0;
 }
