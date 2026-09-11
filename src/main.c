@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "arp.h"
 #include "ethernet.h"
 #include "icmp.h"
 #include "ip.h"
@@ -46,6 +47,16 @@ static void print_verbose_icmp(const icmp_header_t *icmp) {
            icmp->identifier, icmp->sequence);
 }
 
+static void print_verbose_arp(const arp_header_t *arp) {
+    char sender_mac[18], target_mac[18], sender_ip[16], target_ip[16];
+    ethernet_format_mac(arp->sender_mac, sender_mac);
+    ethernet_format_mac(arp->target_mac, target_mac);
+    ip_format_addr(arp->sender_ip, sender_ip);
+    ip_format_addr(arp->target_ip, target_ip);
+    printf("       arp: op=%s sender=%s(%s) target=%s(%s)\n",
+           arp_op_name(arp->operation), sender_ip, sender_mac, target_ip, target_mac);
+}
+
 int main(int argc, char **argv) {
     int verbose = 0;
     const char *path = NULL;
@@ -84,6 +95,21 @@ int main(int argc, char **argv) {
         if (ethernet_parse(buf, header.incl_len, &eth) != 0) {
             printf("%3d: (truncated ethernet frame, %u bytes)\n", count, header.incl_len);
             continue;
+        }
+
+        if (eth.ethertype == ETHERTYPE_ARP) {
+            arp_header_t arp;
+            if (arp_parse(buf + ETHERNET_HEADER_LEN, header.incl_len - ETHERNET_HEADER_LEN, &arp) == 0) {
+                char sender_ip[16], target_ip[16];
+                ip_format_addr(arp.sender_ip, sender_ip);
+                ip_format_addr(arp.target_ip, target_ip);
+                printf("%3d: arp %-5s %s -> %s\n", count, arp_op_name(arp.operation), sender_ip, target_ip);
+                if (verbose) {
+                    print_verbose_ethernet(&eth);
+                    print_verbose_arp(&arp);
+                }
+                continue;
+            }
         }
 
         if (eth.ethertype != ETHERTYPE_IPV4) {
