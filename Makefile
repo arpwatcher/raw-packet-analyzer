@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude
 
-CORE_SRC = src/pcap_format.c src/ethernet.c src/ip.c src/tcp.c src/udp.c src/icmp.c
-TEST_BINS = bin/test_pcap_format bin/test_ethernet bin/test_ip bin/test_tcp bin/test_udp bin/test_icmp
+CORE_SRC = src/pcap_format.c src/ethernet.c src/ip.c src/tcp.c src/udp.c src/icmp.c src/arp.c
+TEST_BINS = bin/test_pcap_format bin/test_ethernet bin/test_ip bin/test_tcp bin/test_udp bin/test_icmp bin/test_arp
 
 .PHONY: all test clean
 
@@ -23,6 +23,7 @@ test: $(TEST_BINS) bin/pktdump bin/genpcap
 	./bin/test_tcp
 	./bin/test_udp
 	./bin/test_icmp
+	./bin/test_arp
 	./tests/test_genpcap_integration.sh
 
 bin/test_pcap_format: $(CORE_SRC) tests/test_pcap_format.c
@@ -48,6 +49,10 @@ bin/test_udp: $(CORE_SRC) tests/test_udp.c
 bin/test_icmp: $(CORE_SRC) tests/test_icmp.c
 	mkdir -p bin
 	$(CC) $(CFLAGS) -o $@ $(CORE_SRC) tests/test_icmp.c
+
+bin/test_arp: $(CORE_SRC) tests/test_arp.c
+	mkdir -p bin
+	$(CC) $(CFLAGS) -o $@ $(CORE_SRC) tests/test_arp.c
 
 clean:
 	rm -rf bin
