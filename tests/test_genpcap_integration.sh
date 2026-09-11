@@ -1,7 +1,7 @@
 #!/bin/sh
 # end-to-end check that genpcap's output is actually readable by pktdump -
-# the unit tests cover pcap_format/ethernet/ip/tcp/udp/icmp in isolation, but
-# nothing else exercises the full write-then-parse pipeline through the
+# the unit tests cover pcap_format/ethernet/ip/tcp/udp/icmp/arp in isolation,
+# but nothing else exercises the full write-then-parse pipeline through the
 # real binaries the way a user would actually run them.
 set -e
 
@@ -15,6 +15,7 @@ RESULT=$(./bin/pktdump "$OUT")
 echo "$RESULT" | grep -q "203.0.113.5.*:51000 -> 10.0.0.10.*:22.*tcp.*flags=SYN"
 echo "$RESULT" | grep -q "10.0.0.5.*:52000 -> 8.8.8.8.*:53.*udp"
 echo "$RESULT" | grep -q "10.0.0.5.*-> 10.0.0.1.*icmp.*echo request"
-echo "$RESULT" | grep -q "^3 packets$"
+echo "$RESULT" | grep -q "arp request 10.0.0.5 -> 10.0.0.1"
+echo "$RESULT" | grep -q "^4 packets$"
 
 echo "test_genpcap_integration passed"

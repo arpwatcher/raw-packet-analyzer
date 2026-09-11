@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "arp.h"
 #include "ethernet.h"
 #include "icmp.h"
 #include "ip.h"
@@ -82,6 +83,25 @@ static size_t build_icmp_echo_request(unsigned char *buf, uint16_t identifier, u
     return 8;
 }
 
+static size_t build_arp_request(unsigned char *buf, uint32_t sender_ip, uint32_t target_ip) {
+    buf[0] = 0x00; buf[1] = 0x01; /* hardware type: ethernet */
+    buf[2] = 0x08; buf[3] = 0x00; /* protocol type: ipv4 */
+    buf[4] = 0x06; /* hardware len */
+    buf[5] = 0x04; /* protocol len */
+    buf[6] = 0x00; buf[7] = 0x01; /* operation: request */
+    memcpy(buf + 8, SRC_MAC, 6);
+    buf[14] = (unsigned char)(sender_ip >> 24);
+    buf[15] = (unsigned char)(sender_ip >> 16);
+    buf[16] = (unsigned char)(sender_ip >> 8);
+    buf[17] = (unsigned char)(sender_ip);
+    memset(buf + 18, 0, 6); /* target mac unknown - that's the point of asking */
+    buf[24] = (unsigned char)(target_ip >> 24);
+    buf[25] = (unsigned char)(target_ip >> 16);
+    buf[26] = (unsigned char)(target_ip >> 8);
+    buf[27] = (unsigned char)(target_ip);
+    return 28;
+}
+
 static uint32_t ip_addr(unsigned char a, unsigned char b, unsigned char c, unsigned char d) {
     return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) | d;
 }
@@ -122,8 +142,13 @@ int main(int argc, char **argv) {
     off += build_icmp_echo_request(packet + off, 1, 1);
     pcap_writer_write_packet(&writer, 1700000002, 0, packet, (uint32_t)off);
 
+    /* packet 4: arp request, who has 10.0.0.1? tell 10.0.0.5 */
+    off = build_ethernet(packet, ETHERTYPE_ARP);
+    off += build_arp_request(packet + off, ip_addr(10, 0, 0, 5), ip_addr(10, 0, 0, 1));
+    pcap_writer_write_packet(&writer, 1700000003, 0, packet, (uint32_t)off);
+
     pcap_writer_close(&writer);
 
-    fprintf(stderr, "wrote 3 packets to %s\n", argv[1]);
+    fprintf(stderr, "wrote 4 packets to %s\n", argv[1]);
     return 0;
 }
