@@ -26,19 +26,27 @@ usual C pointer/alignment traps than reading about them.
   (only meaningful for echo request/reply, but that's most of what shows up in a
   normal capture - a ping). includes a name lookup so the summary line shows "echo
   request" instead of a bare type number.
+- `arp.c/h` - parses arp headers. unlike everything else here, arp isn't carried
+  inside ip - it's its own ethertype (0x0806) straight on the ethernet frame, so it
+  needed its own code path in main.c rather than fitting into the ip.protocol
+  dispatch the other parsers use. only handles the common case (ethernet hardware
+  addresses, ipv4 protocol addresses) and rejects anything else explicitly.
 - `main.c` - `pktdump`, a small cli that reads a pcap file and prints a tcpdump-style
   one-line summary per packet, with ports and tcp flags when the payload is tcp/udp,
-  or the icmp type name when it's icmp. `--verbose` prints the full parsed fields of
-  every header underneath each summary line instead of just the one-liner.
-- `genpcap.c` - a small cli that writes a synthetic pcap (a tcp syn packet, a udp
-  packet, an icmp echo request) entirely in C, building the raw ethernet/ip/tcp/udp/icmp
-  bytes by hand and piping them through the pcap writer. exists so this repo doesn't
-  need python/scapy to produce its own test captures - `tests/fixtures/make_sample_pcap.py`
-  is still there for the more varied fixture, but genpcap has no external dependency
-  at all.
+  the icmp type name when it's icmp, or the arp operation and addresses when it's
+  arp. `--verbose` prints the full parsed fields of every header underneath each
+  summary line instead of just the one-liner.
+- `genpcap.c` - a small cli that writes a synthetic pcap (tcp syn, udp, icmp echo
+  request, arp request - one of each protocol pktdump parses) entirely in C, building
+  the raw bytes by hand and piping them through the pcap writer. exists so this repo
+  doesn't need python/scapy to produce its own test captures -
+  `tests/fixtures/make_sample_pcap.py` is still there for the more varied fixture, but
+  genpcap has no external dependency at all.
 
-Still to come: maybe live capture via raw sockets if this environment allows it
-(untested so far, might need privileges this sandbox doesn't have).
+Still to come: maybe live capture via raw sockets - this environment happens to allow
+raw AF_PACKET sockets, but there's no real traffic here to capture and test against,
+so it'd be hard to build and verify properly in this sandbox. parked until there's a
+better way to test it.
 
 ## Usage
 
@@ -55,7 +63,7 @@ make all
 make test
 ```
 
-28 tests across six binaries (pcap format, ethernet, ip, tcp, udp, icmp), using plain assert() rather
+33 tests across seven binaries (pcap format, ethernet, ip, tcp, udp, icmp, arp), using plain assert() rather
 than a test framework - simple, no dependencies, matches the rest of this project's
 "nothing fancy, just correct" approach. `tests/fixtures/sample.pcap` is a real pcap
 generated with scapy (`tests/fixtures/make_sample_pcap.py`), so the tests are parsing an
